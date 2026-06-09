@@ -1,0 +1,11 @@
+User-agent: *
+Disallow: /admin
+Disallow: /admin/
+Disallow: /api/admin
+Disallow: /api/admin/
+Disallow: /bayar/
+Disallow: /pesanan/
+Disallow: /cek
+Allow: /
+
+Sitemap:

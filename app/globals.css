@@ -1,0 +1,153 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: 246 247 251;
+  --surface: 255 255 255;
+  --surface-2: 248 249 253;
+  --border: 230 232 238;
+  --text: 15 23 42;
+  --muted: 91 101 115;
+  --brand-from: 99 102 241;
+  --brand-to: 6 182 212;
+  --success: 22 163 74;
+  --warning: 234 179 8;
+  --danger: 220 38 38;
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, .04), 0 8px 24px rgba(15, 23, 42, .06);
+  --shadow-card-hover: 0 1px 2px rgba(15, 23, 42, .04), 0 12px 32px rgba(15, 23, 42, .10);
+}
+
+[data-theme='dark'] {
+  --bg: 10 13 20;
+  --surface: 18 23 35;
+  --surface-2: 26 32 48;
+  --border: 34 42 61;
+  --text: 231 236 243;
+  --muted: 138 147 166;
+  --brand-from: 129 140 248;
+  --brand-to: 34 211 238;
+  --success: 34 197 94;
+  --warning: 250 204 21;
+  --danger: 248 113 113;
+  --shadow-card: 0 0 0 1px rgba(255, 255, 255, .04);
+  --shadow-card-hover: 0 0 0 1px rgba(129, 140, 248, .35);
+}
+
+html, body {
+  background: rgb(var(--bg));
+  color: rgb(var(--text));
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  border-color: rgb(var(--border));
+}
+
+@layer components {
+  .container-page {
+    @apply max-w-page mx-auto px-4 sm:px-6;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-btn px-4 py-2.5 text-sm font-semibold transition active:scale-[.98] disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, rgb(var(--brand-from)), rgb(var(--brand-to)));
+    color: #fff;
+    box-shadow: 0 6px 20px -6px rgba(99, 102, 241, .55);
+  }
+  .btn-primary:hover { filter: brightness(1.05); }
+  .btn-secondary {
+    @apply bg-surface text-text border;
+  }
+  .btn-secondary:hover { background: rgb(var(--surface-2)); }
+  .btn-ghost {
+    @apply text-text;
+  }
+  .btn-ghost:hover { background: rgb(var(--surface-2)); }
+  .btn-danger {
+    @apply text-white;
+    background: rgb(var(--danger));
+  }
+
+  .card {
+    background: rgb(var(--surface));
+    border: 1px solid rgb(var(--border));
+    box-shadow: var(--shadow-card);
+    @apply rounded-card;
+  }
+  .card-hover { transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+  .card-hover:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-card-hover);
+    border-color: rgb(var(--brand-from));
+  }
+
+  .input, .textarea, .select {
+    background: rgb(var(--surface));
+    border: 1px solid rgb(var(--border));
+    color: rgb(var(--text));
+    @apply rounded-btn px-3.5 py-2.5 w-full text-sm outline-none transition;
+  }
+  .input:focus, .textarea:focus, .select:focus {
+    border-color: rgb(var(--brand-from));
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, .15);
+  }
+
+  .label {
+    @apply text-xs font-semibold uppercase tracking-wide text-muted mb-1.5 block;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium border whitespace-nowrap transition;
+    background: rgb(var(--surface));
+    color: rgb(var(--text));
+  }
+  .chip:hover { background: rgb(var(--surface-2)); }
+  .chip-active {
+    background: linear-gradient(135deg, rgb(var(--brand-from)), rgb(var(--brand-to)));
+    color: #fff;
+    border-color: transparent;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold;
+  }
+  .badge-success { background: rgba(34,197,94,.12); color: rgb(var(--success)); }
+  .badge-warning { background: rgba(234,179,8,.14); color: rgb(var(--warning)); }
+  .badge-danger { background: rgba(220,38,38,.12); color: rgb(var(--danger)); }
+  .badge-muted { background: rgb(var(--surface-2)); color: rgb(var(--muted)); }
+
+  .gradient-text {
+    background: linear-gradient(135deg, rgb(var(--brand-from)), rgb(var(--brand-to)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .pulse-dot::before {
+    content: '';
+    display: inline-block;
+    width: 8px; height: 8px; border-radius: 999px;
+    background: currentColor;
+    margin-right: 8px;
+    animation: pulse-dot 1.4s ease-in-out infinite;
+  }
+
+  .skeleton {
+    background: linear-gradient(90deg,
+      rgb(var(--surface-2)) 0%,
+      rgb(var(--border)) 50%,
+      rgb(var(--surface-2)) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.6s linear infinite;
+  }
+}
+
+::selection { background: rgba(99, 102, 241, .25); }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: rgb(var(--border)); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--muted)); }
