@@ -138,6 +138,23 @@ export default function WrImporterClient({
     } finally { setBusy(null); }
   }
 
+  async function bulkRefetch() {
+    if (!confirm('Refetch detail dari WR untuk semua order delivered yang format-nya rusak? Pembeli akan dapat email ulang.')) return;
+    setBusy('bulk'); setMsg(null);
+    try {
+      const r = await fetch('/api/admin/wr/bulk-refetch', { method: 'POST' });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d?.error || 'Gagal');
+      setMsg({
+        kind: 'ok',
+        text: `Scan ${d.scanned} order, target ${d.targeted}, berhasil recover ${d.recovered}.`,
+      });
+      router.refresh();
+    } catch (e) {
+      setMsg({ kind: 'err', text: (e as Error).message });
+    } finally { setBusy(null); }
+  }
+
   const filtered = useMemo(() => {
     if (!search.trim()) return products;
     const q = search.toLowerCase();
@@ -171,9 +188,14 @@ export default function WrImporterClient({
       <div className="card p-5">
         <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
           <div className="font-semibold">Sudah Diimpor ({imported.length})</div>
-          <button onClick={syncAll} disabled={busy === 'sync' || imported.length === 0} className="btn btn-secondary !text-xs">
-            {busy === 'sync' ? 'Sync...' : 'Sync Harga & Stok dari WR'}
-          </button>
+          <div className="flex gap-2 flex-wrap">
+            <button onClick={bulkRefetch} disabled={busy === 'bulk'} className="btn btn-ghost !text-xs">
+              {busy === 'bulk' ? 'Refetch...' : 'Recover Order Rusak'}
+            </button>
+            <button onClick={syncAll} disabled={busy === 'sync' || imported.length === 0} className="btn btn-secondary !text-xs">
+              {busy === 'sync' ? 'Sync...' : 'Sync Harga & Stok dari WR'}
+            </button>
+          </div>
         </div>
         {imported.length === 0 ? (
           <p className="text-sm text-muted">Belum ada varian yang diimpor.</p>

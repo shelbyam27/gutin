@@ -64,6 +64,22 @@ function variantSource(variantId: number): { source: string | null; wr_id: strin
   return r ?? { source: null, wr_id: null };
 }
 
+function unwrapLabelValue(obj: Record<string, unknown>): { label: string; value: unknown } | null {
+  const labelKeys = ['label', 'name', 'field', 'title', 'key'];
+  const valueKeys = ['value', 'val', 'content', 'data', 'detail'];
+  let labelKey: string | null = null;
+  let valueKey: string | null = null;
+  for (const k of Object.keys(obj)) {
+    const low = k.toLowerCase();
+    if (!labelKey && labelKeys.includes(low)) labelKey = k;
+    else if (!valueKey && valueKeys.includes(low)) valueKey = k;
+  }
+  if (!labelKey || !valueKey) return null;
+  const label = obj[labelKey];
+  if (typeof label !== 'string' || !label.trim()) return null;
+  return { label: label.trim(), value: obj[valueKey] };
+}
+
 function flattenEntry(value: unknown, prefix = ''): Array<[string, string]> {
   if (value === null || value === undefined) return [];
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
@@ -80,6 +96,11 @@ function flattenEntry(value: unknown, prefix = ''): Array<[string, string]> {
   }
   if (typeof value === 'object') {
     const obj = value as Record<string, unknown>;
+    const lv = unwrapLabelValue(obj);
+    if (lv) {
+      const key = prefix ? `${prefix}_${lv.label}` : lv.label;
+      return flattenEntry(lv.value, key);
+    }
     const out: Array<[string, string]> = [];
     for (const [k, v] of Object.entries(obj)) {
       const key = prefix ? `${prefix}_${k}` : k;
