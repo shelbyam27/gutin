@@ -7,6 +7,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 const ITEMS = [
   { href: '/admin', label: 'Dashboard', icon: 'home' },
   { href: '/admin/produk', label: 'Produk', icon: 'box' },
+  { href: '/admin/wr', label: 'Import WR', icon: 'cloud' },
   { href: '/admin/stok', label: 'Stok Akun', icon: 'layers' },
   { href: '/admin/flash-sale', label: 'Flash Sale', icon: 'flash' },
   { href: '/admin/pesanan', label: 'Pesanan', icon: 'cart' },
@@ -89,6 +90,8 @@ function Icon({ name }: { name: string }) {
       return <svg {...common}><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>;
     case 'flash':
       return <svg {...common}><path d="M13 2L3 14h7l-1 8 11-14h-7l1-6z" /></svg>;
+    case 'cloud':
+      return <svg {...common}><path d="M17.5 19a4.5 4.5 0 1 0-1.4-8.78A6 6 0 0 0 4 13a5 5 0 0 0 5 5h8.5z" /><path d="M12 12v6" /><path d="M9 15l3 3 3-3" /></svg>;
     default:
       return null;
   }

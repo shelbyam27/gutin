@@ -30,6 +30,12 @@ interface VariantRow {
   discount_price: number | null;
   discount_label: string | null;
   discount_until: string | null;
+  source: string | null;
+  wr_id: string | null;
+  cost_price: number | null;
+  margin_mode: string | null;
+  margin_value: number | null;
+  wr_stock: number | null;
   stock: number;
   sold: number;
 }
@@ -162,6 +168,8 @@ function VariantsSection({ productId, initial }: { productId: number; initial: V
         id: d.id, name, duration_label: duration, price,
         description: null, is_active: 1, stock: 0, sold: 0,
         discount_price: null, discount_label: null, discount_until: null,
+        source: 'manual', wr_id: null, cost_price: null,
+        margin_mode: null, margin_value: null, wr_stock: null,
       }]);
       setName(''); setDuration(''); setPrice(0);
       router.refresh();
@@ -222,14 +230,22 @@ function VariantsSection({ productId, initial }: { productId: number; initial: V
         ) : variants.map((v) => {
           const isEditing = editing === v.id;
           const hasDiscount = v.discount_price && v.discount_price < v.price;
+          const isWr = v.source === 'wr';
           return (
-            <div key={v.id} className="border rounded-card p-4">
+            <div key={v.id} className={`border rounded-card p-4 ${isWr ? 'bg-surface-2/40' : ''}`}>
+              {isWr && (
+                <div className="flex items-center gap-2 mb-2 text-[11px]">
+                  <span className="badge badge-muted">Warung Rebahan</span>
+                  <span className="text-muted">Modal: {formatIDR(v.cost_price ?? 0)} · Margin: {v.margin_mode === 'fixed' ? `+Rp${(v.margin_value ?? 0).toLocaleString('id-ID')}` : `+${v.margin_value ?? 0}%`} · Stok WR: {v.wr_stock ?? 0}</span>
+                  <a href="/admin/wr" className="ml-auto text-brand-from hover:underline">Atur di importer →</a>
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-start">
                 <input className="input !py-2 sm:col-span-3" value={v.name} onChange={(e) => patch(v.id, { name: e.target.value })} />
                 <input className="input !py-2 sm:col-span-2" value={v.duration_label || ''} onChange={(e) => patch(v.id, { duration_label: e.target.value })} placeholder="Durasi" />
                 <input className="input !py-2 sm:col-span-2" type="number" value={v.price} onChange={(e) => patch(v.id, { price: Number(e.target.value) })} placeholder="Harga" />
                 <div className="text-xs sm:col-span-3 flex flex-col">
-                  <span className="text-muted">Stok / Terjual</span>
+                  <span className="text-muted">{isWr ? 'Stok WR / Terjual' : 'Stok / Terjual'}</span>
                   <span className="font-semibold">{v.stock} <span className="text-muted">· {v.sold}</span></span>
                 </div>
                 <label className="flex items-center gap-1 text-xs sm:col-span-1">

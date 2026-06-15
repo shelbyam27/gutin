@@ -46,10 +46,11 @@ function loadProducts(): ProductCardData[] {
       .prepare(
         `SELECT v.id, v.product_id, v.name, v.duration_label, v.price, v.description, v.is_active,
                 v.discount_price, v.discount_label, v.discount_until,
-                COALESCE(SUM(CASE WHEN c.status = 'available' THEN 1 ELSE 0 END), 0) AS stock
-         FROM variants v LEFT JOIN credentials c ON c.variant_id = v.id
-         WHERE v.product_id = ? AND v.is_active = 1
-         GROUP BY v.id`,
+                CASE WHEN v.source = 'wr' THEN COALESCE(v.wr_stock, 0)
+                     ELSE COALESCE((SELECT COUNT(*) FROM credentials c WHERE c.variant_id = v.id AND c.status = 'available'), 0)
+                END AS stock
+         FROM variants v
+         WHERE v.product_id = ? AND v.is_active = 1`,
       )
       .all(p.id) as RawVariant[];
 

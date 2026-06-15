@@ -12,6 +12,8 @@ const Patch = z.object({
   discount_price: z.number().int().nullable().optional(),
   discount_label: z.string().max(40).nullable().optional(),
   discount_until: z.string().nullable().optional(),
+  margin_mode: z.enum(['percent', 'fixed']).nullable().optional(),
+  margin_value: z.number().int().min(0).nullable().optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
@@ -19,7 +21,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const id = Number(params.id);
   const body = Patch.safeParse(await req.json().catch(() => ({})));
   if (!body.success) return NextResponse.json({ error: body.error.issues[0]?.message || 'Bad input' }, { status: 400 });
-  const allowed = ['name', 'duration_label', 'price', 'description', 'is_active', 'discount_price', 'discount_label', 'discount_until'];
+  const allowed = ['name', 'duration_label', 'price', 'description', 'is_active', 'discount_price', 'discount_label', 'discount_until', 'margin_mode', 'margin_value'];
   const fields = Object.entries(body.data).filter(([k, v]) => allowed.includes(k) && v !== undefined);
   if (fields.length === 0) return NextResponse.json({ ok: true });
 

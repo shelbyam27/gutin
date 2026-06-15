@@ -34,9 +34,10 @@ function loadStats(): Stats {
 
   const lowStock = db.prepare(
     `SELECT p.name AS product, v.name AS variant,
-            COALESCE(SUM(CASE WHEN c.status = 'available' THEN 1 ELSE 0 END), 0) AS stock
+            CASE WHEN v.source = 'wr' THEN COALESCE(v.wr_stock, 0)
+                 ELSE COALESCE((SELECT COUNT(*) FROM credentials c WHERE c.variant_id = v.id AND c.status = 'available'), 0)
+            END AS stock
      FROM variants v JOIN products p ON p.id = v.product_id
-     LEFT JOIN credentials c ON c.variant_id = v.id
      WHERE v.is_active = 1 AND p.is_active = 1
      GROUP BY v.id
      HAVING stock < 5

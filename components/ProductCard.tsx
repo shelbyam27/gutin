@@ -39,7 +39,9 @@ export default function ProductCard({ p }: { p: ProductCardData }) {
           <img
             src={p.image}
             alt={p.name}
-            className="relative w-1/2 h-1/2 object-contain drop-shadow-xl"
+            className="relative w-3/5 h-3/5 object-contain drop-shadow-xl"
+            loading="lazy"
+            referrerPolicy="no-referrer"
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).style.display = "none";
             }}

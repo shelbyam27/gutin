@@ -56,6 +56,30 @@ function migrate(db: Database.Database) {
       PRAGMA user_version = 1;
     `);
   }
+
+  if (v < 2) {
+    const pCols = (db.prepare('PRAGMA table_info(products)').all() as Array<{ name: string }>).map((c) => c.name);
+    if (!pCols.includes('source')) db.exec("ALTER TABLE products ADD COLUMN source TEXT DEFAULT 'manual'");
+    if (!pCols.includes('wr_id')) db.exec('ALTER TABLE products ADD COLUMN wr_id TEXT');
+    if (!pCols.includes('last_synced_at')) db.exec('ALTER TABLE products ADD COLUMN last_synced_at TEXT');
+
+    const vCols = (db.prepare('PRAGMA table_info(variants)').all() as Array<{ name: string }>).map((c) => c.name);
+    if (!vCols.includes('source')) db.exec("ALTER TABLE variants ADD COLUMN source TEXT DEFAULT 'manual'");
+    if (!vCols.includes('wr_id')) db.exec('ALTER TABLE variants ADD COLUMN wr_id TEXT');
+    if (!vCols.includes('cost_price')) db.exec('ALTER TABLE variants ADD COLUMN cost_price INTEGER');
+    if (!vCols.includes('margin_mode')) db.exec('ALTER TABLE variants ADD COLUMN margin_mode TEXT');
+    if (!vCols.includes('margin_value')) db.exec('ALTER TABLE variants ADD COLUMN margin_value INTEGER');
+    if (!vCols.includes('wr_stock')) db.exec('ALTER TABLE variants ADD COLUMN wr_stock INTEGER');
+    if (!vCols.includes('last_synced_at')) db.exec('ALTER TABLE variants ADD COLUMN last_synced_at TEXT');
+    db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_variants_wr_id ON variants(wr_id) WHERE wr_id IS NOT NULL');
+
+    const oCols = (db.prepare('PRAGMA table_info(orders)').all() as Array<{ name: string }>).map((c) => c.name);
+    if (!oCols.includes('wr_order_id')) db.exec('ALTER TABLE orders ADD COLUMN wr_order_id TEXT');
+    if (!oCols.includes('wr_status')) db.exec('ALTER TABLE orders ADD COLUMN wr_status TEXT');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_orders_wr ON orders(wr_order_id)');
+
+    db.exec('PRAGMA user_version = 2;');
+  }
 }
 
 function init(db: Database.Database) {
@@ -63,6 +87,8 @@ function init(db: Database.Database) {
   const schema = fs.readFileSync(schemaPath, 'utf8');
   db.exec(schema);
   migrate(db);
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_variants_wr_id ON variants(wr_id) WHERE wr_id IS NOT NULL');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_orders_wr ON orders(wr_order_id)');
 
   const adminRow = db
     .prepare('SELECT COUNT(*) AS n FROM admins')
@@ -96,6 +122,15 @@ function init(db: Database.Database) {
     smtp_user: '',
     smtp_pass: '',
     smtp_from: '',
+    wr_api_key: '',
+    wr_base_url: 'https://warungrebahan.com/api/v1',
+    wr_default_margin_mode: 'percent',
+    wr_default_margin_value: '15',
+    wr_min_margin_rp: '1000',
+    wr_round_to: '500',
+    notifier_url: '',
+    notifier_secret: '',
+    notifier_events: 'order.created,order.paid,order.delivered,order.failed',
   };
   const ins = db.prepare(
     'INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)',

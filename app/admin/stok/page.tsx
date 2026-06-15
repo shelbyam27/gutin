@@ -11,7 +11,7 @@ function loadVariants(): VariantStock[] {
             COALESCE(SUM(CASE WHEN c.status = 'sold' THEN 1 ELSE 0 END), 0) AS sold
      FROM variants v JOIN products p ON p.id = v.product_id
      LEFT JOIN credentials c ON c.variant_id = v.id
-     WHERE v.is_active = 1
+     WHERE v.is_active = 1 AND COALESCE(v.source, 'manual') != 'wr'
      GROUP BY v.id ORDER BY p.sort_order ASC, p.id ASC, v.price ASC`,
   ).all() as VariantStock[];
 }

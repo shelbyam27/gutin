@@ -21,11 +21,14 @@ function loadRows(): Row[] {
   return getDb().prepare(
     `SELECT p.id, p.slug, p.name, p.category, p.is_active,
             COUNT(DISTINCT v.id) AS variants,
-            COALESCE(SUM(CASE WHEN c.status = 'available' THEN 1 ELSE 0 END), 0) AS stock,
+            COALESCE(SUM(
+              CASE WHEN v.source = 'wr' THEN COALESCE(v.wr_stock, 0)
+                   ELSE (SELECT COUNT(*) FROM credentials c WHERE c.variant_id = v.id AND c.status = 'available')
+              END
+            ), 0) AS stock,
             COALESCE(MIN(v.price), 0) AS min_price
      FROM products p
      LEFT JOIN variants v ON v.product_id = p.id
-     LEFT JOIN credentials c ON c.variant_id = v.id
      GROUP BY p.id ORDER BY p.sort_order ASC, p.id ASC`,
   ).all() as Row[];
 }

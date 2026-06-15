@@ -7,6 +7,7 @@ import { countAvailableStock } from '@/lib/delivery';
 import { getVariantPriced, effectivePrice, getActiveFlashSale } from '@/lib/pricing';
 import { rateOrder } from '@/lib/ratelimit';
 import { getIp, checkSameOrigin } from '@/lib/security';
+import { notifyOrder, buildPayload } from '@/lib/notifier';
 
 const Body = z.object({
   variantId: z.number().int().positive(),
@@ -99,7 +100,12 @@ export async function POST(req: NextRequest) {
     if (flashSaleId) {
       db.prepare('UPDATE flash_sales SET sold_qty = sold_qty - 1 WHERE id = ?').run(flashSaleId);
     }
-    return NextResponse.json({ error: 'Gagal membuat transaksi pembayaran.' }, { status: 502 });
+    const msg = (e as Error).message || '';
+    console.error('[orders] Pakasir createTransaction error:', msg);
+    const hint = /belum dikonfigurasi/i.test(msg)
+      ? 'Pakasir belum dikonfigurasi. Admin perlu isi project & API key di Pengaturan.'
+      : 'Gagal membuat transaksi pembayaran.';
+    return NextResponse.json({ error: hint, detail: msg.slice(0, 200) }, { status: 502 });
   }
 
   db.prepare(
@@ -120,6 +126,20 @@ export async function POST(req: NextRequest) {
     pakasirData.expired_at || null,
     flashSaleId,
   );
+
+  notifyOrder(buildPayload('order.created', {
+    code,
+    product_name: productRow.name,
+    variant_name: variant.name,
+    amount: pakasirData.amount,
+    fee: pakasirData.fee || 0,
+    total: pakasirData.total_payment || pakasirData.amount,
+    email,
+    whatsapp: whatsapp || null,
+    status: 'pending',
+    payment_method: 'qris',
+    created_at: new Date().toISOString(),
+  }));
 
   return NextResponse.json({ code });
 }

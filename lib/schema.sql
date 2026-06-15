@@ -12,6 +12,9 @@ CREATE TABLE IF NOT EXISTS products (
   brand_color TEXT,
   is_active INTEGER DEFAULT 1,
   sort_order INTEGER DEFAULT 0,
+  source TEXT DEFAULT 'manual',
+  wr_id TEXT,
+  last_synced_at TEXT,
   created_at TEXT DEFAULT (datetime('now'))
 );
 
@@ -26,6 +29,13 @@ CREATE TABLE IF NOT EXISTS variants (
   discount_price INTEGER,
   discount_label TEXT,
   discount_until TEXT,
+  source TEXT DEFAULT 'manual',
+  wr_id TEXT,
+  cost_price INTEGER,
+  margin_mode TEXT,
+  margin_value INTEGER,
+  wr_stock INTEGER,
+  last_synced_at TEXT,
   FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 );
 
@@ -60,6 +70,8 @@ CREATE TABLE IF NOT EXISTS orders (
   delivered_at TEXT,
   delivered_content TEXT,
   flash_sale_id INTEGER,
+  wr_order_id TEXT,
+  wr_status TEXT,
   created_at TEXT DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);

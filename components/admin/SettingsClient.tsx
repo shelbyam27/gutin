@@ -16,6 +16,15 @@ interface SettingsForm {
   smtp_user: string;
   smtp_pass: string;
   smtp_from: string;
+  wr_api_key: string;
+  wr_base_url: string;
+  wr_default_margin_mode: string;
+  wr_default_margin_value: string;
+  wr_min_margin_rp: string;
+  wr_round_to: string;
+  notifier_url: string;
+  notifier_secret: string;
+  notifier_events: string;
 }
 
 export default function SettingsClient({ initial, baseUrl }: { initial: SettingsForm; baseUrl: string }) {
@@ -75,6 +84,47 @@ export default function SettingsClient({ initial, baseUrl }: { initial: Settings
     } finally { setBusy(null); }
   }
 
+  async function testWr() {
+    setBusy('wr'); setMsg(null);
+    try {
+      const save = await fetch('/api/admin/settings', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wr_api_key: s.wr_api_key, wr_base_url: s.wr_base_url }),
+      });
+      if (!save.ok) throw new Error('Gagal simpan API key sebelum tes.');
+      const r = await fetch('/api/admin/wr/balance', { method: 'POST' });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d?.error || 'Gagal');
+      const bal = Number(d?.balance ?? 0);
+      setMsg({ kind: 'ok', text: `Warung Rebahan terhubung. Saldo: Rp ${bal.toLocaleString('id-ID')}` });
+    } catch (e) {
+      setMsg({ kind: 'err', text: (e as Error).message });
+    } finally { setBusy(null); }
+  }
+
+  async function testNotifier() {
+    setBusy('notifier'); setMsg(null);
+    try {
+      const save = await fetch('/api/admin/settings', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notifier_url: s.notifier_url, notifier_secret: s.notifier_secret, notifier_events: s.notifier_events }),
+      });
+      if (!save.ok) throw new Error('Gagal simpan webhook URL sebelum tes.');
+      const r = await fetch('/api/admin/test-notifier', { method: 'POST' });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d?.error || 'Gagal');
+      setMsg({ kind: 'ok', text: 'Test notifikasi terkirim. Cek tujuan webhook kamu.' });
+    } catch (e) {
+      setMsg({ kind: 'err', text: (e as Error).message });
+    } finally { setBusy(null); }
+  }
+
+  function toggleEvent(ev: string) {
+    const cur = new Set(s.notifier_events.split(',').map((x) => x.trim()).filter(Boolean));
+    if (cur.has(ev)) cur.delete(ev); else cur.add(ev);
+    setS((p) => ({ ...p, notifier_events: Array.from(cur).join(',') }));
+  }
+
   async function changePassword() {
     if (pwd1 !== pwd2) { setMsg({ kind: 'err', text: 'Password tidak sama.' }); return; }
     if (pwd1.length < 8) { setMsg({ kind: 'err', text: 'Minimal 8 karakter.' }); return; }
@@ -122,6 +172,79 @@ export default function SettingsClient({ initial, baseUrl }: { initial: Settings
           <div className="sm:col-span-2 rounded-btn bg-surface-2 p-3 text-xs">
             <div className="text-muted mb-1">URL Webhook (set di dashboard Pakasir):</div>
             <div className="font-mono break-all">{webhookUrl}</div>
+          </div>
+        </div>
+      </Section>
+
+      <Section title="Warung Rebahan API"
+               action={<button type="button" onClick={testWr} disabled={busy === 'wr'} className="btn btn-secondary !text-xs">{busy === 'wr' ? 'Mengecek...' : 'Tes Koneksi & Saldo'}</button>}>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div className="sm:col-span-2"><label className="label">API Key</label><input type="password" className="input font-mono" placeholder="Generate di dashboard Warung Rebahan → API Settings" value={s.wr_api_key} onChange={f('wr_api_key')} /></div>
+          <div className="sm:col-span-2"><label className="label">Base URL</label><input className="input font-mono text-xs" value={s.wr_base_url} onChange={f('wr_base_url')} /></div>
+          <div>
+            <label className="label">Margin Default — Mode</label>
+            <select className="select" value={s.wr_default_margin_mode} onChange={f('wr_default_margin_mode')}>
+              <option value="percent">Persentase (%)</option>
+              <option value="fixed">Nominal Rupiah (+Rp)</option>
+            </select>
+          </div>
+          <div>
+            <label className="label">Margin Default — Nilai</label>
+            <input type="number" className="input" value={s.wr_default_margin_value} onChange={f('wr_default_margin_value')} />
+            <p className="text-[11px] text-muted mt-1">{s.wr_default_margin_mode === 'percent' ? 'Contoh: 15 berarti +15% di atas harga modal.' : 'Contoh: 5000 berarti +Rp5.000 per varian.'}</p>
+          </div>
+          <div>
+            <label className="label">Margin Minimum (Rp)</label>
+            <input type="number" className="input" value={s.wr_min_margin_rp} onChange={f('wr_min_margin_rp')} />
+            <p className="text-[11px] text-muted mt-1">Selisih minimum harga jual − modal. Pakai 0 kalau ga perlu.</p>
+          </div>
+          <div>
+            <label className="label">Pembulatan ke Kelipatan (Rp)</label>
+            <input type="number" className="input" value={s.wr_round_to} onChange={f('wr_round_to')} />
+            <p className="text-[11px] text-muted mt-1">Mis. 500 → harga akan dibulatkan ke atas per Rp500.</p>
+          </div>
+          <div className="sm:col-span-2 rounded-btn bg-surface-2 p-3 text-xs">
+            <div className="text-muted mb-1">URL Webhook (set di dashboard Warung Rebahan):</div>
+            <div className="font-mono break-all">{baseUrl ? `${baseUrl.replace(/\/$/, '')}/api/wr/webhook` : 'Set PUBLIC_BASE_URL di .env'}</div>
+            <div className="text-muted mt-2">Signature divalidasi pakai API key sebagai HMAC-SHA256 secret (header <code className="font-mono">X-Rebahan-Signature</code>).</div>
+          </div>
+          <div className="sm:col-span-2 flex justify-end">
+            <a href="/admin/wr" className="btn btn-primary !text-xs">Buka Importer Produk →</a>
+          </div>
+        </div>
+      </Section>
+
+      <Section title="Notifikasi Webhook (Order Events)"
+               action={<button type="button" onClick={testNotifier} disabled={busy === 'notifier' || !s.notifier_url} className="btn btn-secondary !text-xs">{busy === 'notifier' ? 'Mengirim...' : 'Tes Kirim'}</button>}>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div className="sm:col-span-2">
+            <label className="label">Webhook URL</label>
+            <input className="input font-mono text-xs" placeholder="https://discord.com/api/webhooks/... atau endpoint custom kamu" value={s.notifier_url} onChange={f('notifier_url')} />
+            <p className="text-[11px] text-muted mt-1">Discord webhook auto-format jadi embed cantik. Telegram pakai format <code className="font-mono">https://api.telegram.org/bot&lt;TOKEN&gt;/sendMessage?chat_id=&lt;ID&gt;</code>. URL lain dapet JSON raw + header <code className="font-mono">X-Notifier-Signature</code>.</p>
+          </div>
+          <div className="sm:col-span-2">
+            <label className="label">Secret (HMAC SHA-256, opsional)</label>
+            <input type="password" className="input font-mono" placeholder="Kosongkan kalau Discord/Telegram" value={s.notifier_secret} onChange={f('notifier_secret')} />
+            <p className="text-[11px] text-muted mt-1">Cuma dipakai untuk webhook custom. Verifikasi: <code className="font-mono">hmac_sha256(secret, body)</code> = header <code className="font-mono">X-Notifier-Signature</code>.</p>
+          </div>
+          <div className="sm:col-span-2">
+            <label className="label">Event yang Dikirim</label>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { id: 'order.created', label: 'Order Dibuat (pending)' },
+                { id: 'order.paid', label: 'Pembayaran Diterima' },
+                { id: 'order.delivered', label: 'Pesanan Terkirim' },
+                { id: 'order.failed', label: 'Pesanan Gagal' },
+              ].map((ev) => {
+                const enabled = s.notifier_events.split(',').map((x) => x.trim()).includes(ev.id);
+                return (
+                  <label key={ev.id} className="flex items-center gap-2 text-sm border rounded-btn px-3 py-2 cursor-pointer">
+                    <input type="checkbox" className="accent-brand-from" checked={enabled} onChange={() => toggleEvent(ev.id)} />
+                    <span><span className="font-mono text-xs text-muted">{ev.id}</span><br />{ev.label}</span>
+                  </label>
+                );
+              })}
+            </div>
           </div>
         </div>
       </Section>
