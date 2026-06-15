@@ -79,6 +79,11 @@ export default function OrderDetailClient({ order }: { order: OrderRow }) {
               {busy === 'resend-email' ? '...' : 'Kirim Ulang Email'}
             </button>
           )}
+          {order.wr_order_id && (
+            <button onClick={() => call('refetch-wr')} disabled={busy === 'refetch-wr'} className="btn btn-secondary">
+              {busy === 'refetch-wr' ? '...' : 'Refetch Detail dari WR'}
+            </button>
+          )}
           {(order.status === 'pending' || order.status === 'paid') && (
             <button onClick={() => call('cancel')} disabled={busy === 'cancel'} className="btn btn-danger">
               {busy === 'cancel' ? '...' : 'Batalkan'}

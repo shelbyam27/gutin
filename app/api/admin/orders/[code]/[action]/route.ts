@@ -3,11 +3,12 @@ import { z } from 'zod';
 import { getDb } from '@/lib/db';
 import { adminApiGuard } from '@/lib/guard';
 import { getTransactionDetail, simulatePayment, cancelTransaction } from '@/lib/pakasir';
-import { finalizeOrder, markOrderPaid, getOrderByCode } from '@/lib/delivery';
+import { finalizeOrder, markOrderPaid, getOrderByCode, deliverFromWrTransaction } from '@/lib/delivery';
+import { wrFindTransaction } from '@/lib/warungrebahan';
 import { sendDeliveryMail } from '@/lib/mailer';
 import { getSetting } from '@/lib/settings';
 
-type Action = 'check-status' | 'simulate' | 'finalize' | 'resend-email' | 'cancel' | 'manual-deliver';
+type Action = 'check-status' | 'simulate' | 'finalize' | 'resend-email' | 'cancel' | 'manual-deliver' | 'refetch-wr';
 
 function buildOrderUrl(code: string): string {
   const base = (process.env.PUBLIC_BASE_URL || '').replace(/\/$/, '');
@@ -96,6 +97,23 @@ export async function POST(
           return NextResponse.json({ ok: true, message: `Tersimpan, tapi email gagal: ${(e as Error).message}` });
         }
         return NextResponse.json({ ok: true, message: 'Akun berhasil dikirim manual + email terkirim.' });
+      }
+
+      case 'refetch-wr': {
+        if (!order.wr_order_id) {
+          return NextResponse.json({ error: 'Order ini tidak punya wr_order_id (bukan order WR).' }, { status: 400 });
+        }
+        const td = await wrFindTransaction(order.wr_order_id);
+        if (!td) {
+          return NextResponse.json({ error: 'Transaksi tidak ditemukan di Warung Rebahan.' }, { status: 404 });
+        }
+        const ok = await deliverFromWrTransaction(td, { force: true });
+        return NextResponse.json({
+          ok: true,
+          message: ok
+            ? 'Detail akun berhasil diambil ulang dari WR & email dikirim.'
+            : 'Transaksi belum punya account_details di WR (status: ' + (td.status || 'unknown') + ').',
+        });
       }
 
       default:

@@ -64,30 +64,71 @@ function variantSource(variantId: number): { source: string | null; wr_id: strin
   return r ?? { source: null, wr_id: null };
 }
 
+function flattenEntry(value: unknown, prefix = ''): Array<[string, string]> {
+  if (value === null || value === undefined) return [];
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    const s = String(value).trim();
+    if (!s) return [];
+    return [[prefix || 'detail', s]];
+  }
+  if (Array.isArray(value)) {
+    const out: Array<[string, string]> = [];
+    for (const item of value) {
+      out.push(...flattenEntry(item, prefix));
+    }
+    return out;
+  }
+  if (typeof value === 'object') {
+    const obj = value as Record<string, unknown>;
+    const out: Array<[string, string]> = [];
+    for (const [k, v] of Object.entries(obj)) {
+      const key = prefix ? `${prefix}_${k}` : k;
+      out.push(...flattenEntry(v, key));
+    }
+    return out;
+  }
+  return [];
+}
+
+function recordToLine(rec: Array<[string, string]>): string {
+  return rec.map(([k, v]) => `${k}:${v}`).join('|');
+}
+
 function formatAccountDetails(td: WrTransaction): string {
-  const acc = td.account_details;
-  if (!acc) return '';
-  if (Array.isArray(acc)) {
-    if (acc.length === 0) return '';
-    return acc
-      .map((x: any) => {
-        if (typeof x === 'string') return x;
-        if (x && typeof x === 'object') {
-          return Object.entries(x)
-            .filter(([, v]) => v !== null && v !== undefined && String(v).length > 0)
-            .map(([k, v]) => `${k}:${v}`)
-            .join('|');
-        }
-        return String(x);
-      })
-      .join('\n');
+  const acc: any = td.account_details;
+  const records: Array<Array<[string, string]>> = [];
+
+  if (!acc) {
+    // empty
+  } else if (Array.isArray(acc)) {
+    for (const item of acc) {
+      if (item == null) continue;
+      if (typeof item === 'string') {
+        const trimmed = item.trim();
+        if (trimmed) records.push([['detail', trimmed]]);
+        continue;
+      }
+      if (typeof item === 'object') {
+        const flat = flattenEntry(item);
+        if (flat.length) records.push(flat);
+      }
+    }
+  } else if (typeof acc === 'object') {
+    const flat = flattenEntry(acc);
+    if (flat.length) records.push(flat);
+  } else {
+    const s = String(acc).trim();
+    if (s) records.push([['detail', s]]);
   }
-  if (typeof acc === 'object') {
-    return Object.entries(acc as any)
-      .map(([k, v]) => `${k}:${v}`)
-      .join('|');
+
+  if (records.length === 0 && Array.isArray(td.products) && td.products.length > 0) {
+    for (const p of td.products) {
+      const flat = flattenEntry(p);
+      if (flat.length) records.push(flat);
+    }
   }
-  return String(acc);
+
+  return records.map(recordToLine).join('\n');
 }
 
 function notifyFor(event: 'order.created' | 'order.paid' | 'order.delivered' | 'order.failed', o: OrderRow) {
@@ -137,30 +178,50 @@ async function finalizeWrOrder(order: OrderRow): Promise<{
     return { status: 'paid_no_stock' };
   }
 
-  let wrOrderId = order.wr_order_id;
+  const fresh = getOrderByCode(order.code);
+  if (!fresh) return { status: 'paid_no_stock' };
+  if (fresh.status === 'delivered') return { status: 'already_delivered' };
+
+  let wrOrderId = fresh.wr_order_id;
   let immediateContent = '';
 
   if (!wrOrderId) {
-    try {
-      const result = await wrCreateOrder({ variantId: wr_id, emailInvite: order.email });
-      wrOrderId = result.order_id;
-      db.prepare(
-        `UPDATE orders SET wr_order_id = ?, wr_status = ?, paid_at = COALESCE(paid_at, datetime('now')), status = 'paid'
-         WHERE id = ?`,
-      ).run(wrOrderId, result.status || 'processing', order.id);
-      if (result.status === 'completed' || result.payment_status === 'paid') {
-        const detail = await wrFindTransaction(wrOrderId).catch(() => null);
-        if (detail) immediateContent = formatAccountDetails(detail);
+    const claim = db.prepare(
+      `UPDATE orders SET wr_status = 'creating',
+         paid_at = COALESCE(paid_at, datetime('now')),
+         status = CASE WHEN status = 'pending' THEN 'paid' ELSE status END
+       WHERE id = ?
+         AND wr_order_id IS NULL
+         AND (wr_status IS NULL OR wr_status NOT IN ('creating','processing','completed'))`,
+    ).run(order.id);
+
+    if (claim.changes === 0) {
+      const after = getOrderByCode(order.code);
+      if (after?.status === 'delivered') return { status: 'already_delivered' };
+      wrOrderId = after?.wr_order_id ?? null;
+      if (!wrOrderId) return { status: 'paid_no_stock' };
+    } else {
+      try {
+        const isTest = getSetting('wr_test_mode') === 'true';
+        const result = await wrCreateOrder({ variantId: wr_id, emailInvite: order.email, isTest });
+        wrOrderId = result.order_id;
+        db.prepare(
+          `UPDATE orders SET wr_order_id = ?, wr_status = ? WHERE id = ?`,
+        ).run(wrOrderId, result.status || 'processing', order.id);
+        if (result.status === 'completed' || result.payment_status === 'paid') {
+          const detail = await wrFindTransaction(wrOrderId).catch(() => null);
+          if (detail) immediateContent = formatAccountDetails(detail);
+        }
+      } catch (e) {
+        console.error('[wr] gagal create order:', (e as Error).message);
+        db.prepare(`UPDATE orders SET wr_status = ? WHERE id = ?`).run(
+          'failed:' + (e as Error).message.slice(0, 80),
+          order.id,
+        );
+        const failed = getOrderByCode(order.code);
+        if (failed) notifyFor('order.failed', failed);
+        return { status: 'paid_no_stock' };
       }
-    } catch (e) {
-      console.error('[wr] gagal create order:', (e as Error).message);
-      db.prepare(`UPDATE orders SET status = 'paid', paid_at = COALESCE(paid_at, datetime('now')), wr_status = ? WHERE id = ?`).run(
-        'failed:' + (e as Error).message.slice(0, 80),
-        order.id,
-      );
-      const failed = getOrderByCode(order.code);
-      if (failed) notifyFor('order.failed', failed);
-      return { status: 'paid_no_stock' };
     }
   }
 
@@ -247,13 +308,13 @@ export async function finalizeOrder(code: string): Promise<{
     : { status: 'paid_no_stock' };
 }
 
-export async function deliverFromWrTransaction(td: WrTransaction): Promise<boolean> {
+export async function deliverFromWrTransaction(td: WrTransaction, opts: { force?: boolean } = {}): Promise<boolean> {
   const db = getDb();
   const order = db
     .prepare('SELECT * FROM orders WHERE wr_order_id = ?')
     .get(td.order_id) as OrderRow | undefined;
   if (!order) return false;
-  if (order.status === 'delivered') return true;
+  if (order.status === 'delivered' && !opts.force) return true;
 
   const content = formatAccountDetails(td);
   if (!content) {
@@ -262,7 +323,7 @@ export async function deliverFromWrTransaction(td: WrTransaction): Promise<boole
   }
 
   db.prepare(
-    `UPDATE orders SET status = 'delivered', delivered_at = datetime('now'),
+    `UPDATE orders SET status = 'delivered', delivered_at = COALESCE(delivered_at, datetime('now')),
      delivered_content = ?, wr_status = 'completed', paid_at = COALESCE(paid_at, datetime('now'))
      WHERE id = ?`,
   ).run(content, order.id);

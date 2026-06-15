@@ -22,6 +22,7 @@ interface SettingsForm {
   wr_default_margin_value: string;
   wr_min_margin_rp: string;
   wr_round_to: string;
+  wr_test_mode: string;
   notifier_url: string;
   notifier_secret: string;
   notifier_events: string;
@@ -202,6 +203,17 @@ export default function SettingsClient({ initial, baseUrl }: { initial: Settings
             <label className="label">Pembulatan ke Kelipatan (Rp)</label>
             <input type="number" className="input" value={s.wr_round_to} onChange={f('wr_round_to')} />
             <p className="text-[11px] text-muted mt-1">Mis. 500 → harga akan dibulatkan ke atas per Rp500.</p>
+          </div>
+          <div className="sm:col-span-2 rounded-btn border border-warning/40 bg-warning/10 p-3">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input type="checkbox" className="accent-warning mt-0.5"
+                     checked={s.wr_test_mode === 'true'}
+                     onChange={(e) => setS((p) => ({ ...p, wr_test_mode: e.target.checked ? 'true' : 'false' }))} />
+              <div>
+                <div className="text-sm font-semibold">Sandbox Mode (is_test)</div>
+                <p className="text-[11px] text-muted mt-0.5">Saat aktif, setiap order WR dikirim sebagai checkout dummy. Saldo Warung Rebahan ga kepotong, dan akun yang diterima adalah data dummy. <b>WAJIB matikan</b> sebelum jualan beneran.</p>
+              </div>
+            </label>
           </div>
           <div className="sm:col-span-2 rounded-btn bg-surface-2 p-3 text-xs">
             <div className="text-muted mb-1">URL Webhook (set di dashboard Warung Rebahan):</div>

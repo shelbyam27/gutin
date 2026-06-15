@@ -128,6 +128,7 @@ function init(db: Database.Database) {
     wr_default_margin_value: '15',
     wr_min_margin_rp: '1000',
     wr_round_to: '500',
+    wr_test_mode: 'false',
     notifier_url: '',
     notifier_secret: '',
     notifier_events: 'order.created,order.paid,order.delivered,order.failed',

@@ -8,7 +8,7 @@ const ALLOWED = new Set([
   'smtp_host', 'smtp_port', 'smtp_secure', 'smtp_user', 'smtp_pass', 'smtp_from',
   'wr_api_key', 'wr_base_url',
   'wr_default_margin_mode', 'wr_default_margin_value',
-  'wr_min_margin_rp', 'wr_round_to',
+  'wr_min_margin_rp', 'wr_round_to', 'wr_test_mode',
   'notifier_url', 'notifier_secret', 'notifier_events',
 ]);
 

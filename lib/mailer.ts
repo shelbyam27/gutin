@@ -64,19 +64,26 @@ interface DeliveryArgs {
 }
 
 export async function sendDeliveryMail(a: DeliveryArgs): Promise<void> {
-  const fields = a.credential ? parseCredential(a.credential) : [];
-  const credBlock = a.credential
-    ? `<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:16px 0;width:100%;border:1px solid #e6e8ee;border-radius:10px;overflow:hidden">
-        ${fields
-          .map(
-            (f) => `
-        <tr>
-          <td style="background:#f6f7fb;padding:10px 14px;color:#5b6573;font-size:13px;width:38%;border-bottom:1px solid #e6e8ee">${escapeHtml(f.label)}</td>
-          <td style="padding:10px 14px;font-family:Menlo,Consolas,monospace;font-size:14px;color:#0f172a;border-bottom:1px solid #e6e8ee">${escapeHtml(f.value)}</td>
-        </tr>`,
-          )
-          .join('')}
-      </table>`
+  const records = a.credential ? parseCredentialRecords(a.credential) : [];
+
+  const credBlock = records.length > 0
+    ? records
+        .map(
+          (rec, idx) => `
+        ${records.length > 1 ? `<div style="margin:14px 0 4px;font-weight:600;font-size:13px;color:#5b6573">Akun #${idx + 1}</div>` : ''}
+        <table cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:8px 0 0;width:100%;border:1px solid #e6e8ee;border-radius:10px;overflow:hidden">
+          ${rec
+            .map(
+              (f) => `
+          <tr>
+            <td style="background:#f6f7fb;padding:10px 14px;color:#5b6573;font-size:13px;width:38%;border-bottom:1px solid #e6e8ee">${escapeHtml(f.label)}</td>
+            <td style="padding:10px 14px;font-family:Menlo,Consolas,monospace;font-size:14px;color:#0f172a;border-bottom:1px solid #e6e8ee">${escapeHtml(f.value)}</td>
+          </tr>`,
+            )
+            .join('')}
+        </table>`,
+        )
+        .join('')
     : `<p style="background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:12px 14px;border-radius:10px;margin:16px 0">
         Pembayaran kamu sudah kami terima, tapi stok untuk produk ini lagi habis. Admin akan kirim akun secara manual maksimal 1×24 jam. Kalau urgent, hubungi WhatsApp di halaman pesanan.
       </p>`;
@@ -110,6 +117,18 @@ export async function sendDeliveryMail(a: DeliveryArgs): Promise<void> {
   });
 }
 
+export function parseCredentialRecords(
+  raw: string,
+): Array<Array<{ label: string; value: string }>> {
+  if (!raw) return [];
+  return raw
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .map(parseCredential)
+    .filter((r) => r.length > 0);
+}
+
 export function parseCredential(
   raw: string,
 ): Array<{ label: string; value: string }> {
@@ -121,15 +140,29 @@ export function parseCredential(
       const idx = part.indexOf(':');
       if (idx === -1) return { label: 'Detail', value: part };
       return {
-        label: capitalize(part.slice(0, idx).trim()),
+        label: humanizeLabel(part.slice(0, idx).trim()),
         value: part.slice(idx + 1).trim(),
       };
-    });
+    })
+    .filter((f) => f.value.length > 0);
 }
 
-function capitalize(s: string) {
+function humanizeLabel(s: string): string {
   if (!s) return s;
-  return s.charAt(0).toUpperCase() + s.slice(1);
+  let key = s.toLowerCase().replace(/[-\s]+/g, '_');
+  for (const prefix of ['details_', 'detail_', 'account_', 'data_', 'item_']) {
+    if (key.startsWith(prefix) && key.length > prefix.length) key = key.slice(prefix.length);
+  }
+  const map: Record<string, string> = {
+    email: 'Email', password: 'Password', pin: 'PIN', profile: 'Profile',
+    username: 'Username', user: 'Username', url: 'URL', link: 'Link',
+    code: 'Kode', key: 'Key', serial: 'Serial', note: 'Catatan',
+    notes: 'Catatan', warranty: 'Garansi', expired: 'Expired',
+    duration: 'Durasi', product: 'Produk', name: 'Nama',
+  };
+  if (map[key]) return map[key];
+  return key.split('_').filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
 
 function escapeHtml(s: string) {
