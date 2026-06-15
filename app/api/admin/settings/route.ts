@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { setSetting } from '@/lib/settings';
 import { adminApiGuard } from '@/lib/guard';
+import { ensureWrScheduler } from '@/lib/wrScheduler';
 
 const ALLOWED = new Set([
   'brand_name', 'brand_tagline', 'whatsapp_contact',
@@ -9,6 +10,7 @@ const ALLOWED = new Set([
   'wr_api_key', 'wr_base_url',
   'wr_default_margin_mode', 'wr_default_margin_value',
   'wr_min_margin_rp', 'wr_round_to', 'wr_test_mode',
+  'wr_auto_sync_enabled', 'wr_auto_sync_interval_minutes',
   'notifier_url', 'notifier_secret', 'notifier_events',
 ]);
 
@@ -19,5 +21,6 @@ export async function POST(req: NextRequest) {
     if (!ALLOWED.has(k)) continue;
     setSetting(k, String(v ?? ''));
   }
+  try { ensureWrScheduler(); } catch {}
   return NextResponse.json({ ok: true });
 }

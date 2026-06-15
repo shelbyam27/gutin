@@ -23,6 +23,8 @@ interface SettingsForm {
   wr_min_margin_rp: string;
   wr_round_to: string;
   wr_test_mode: string;
+  wr_auto_sync_enabled: string;
+  wr_auto_sync_interval_minutes: string;
   notifier_url: string;
   notifier_secret: string;
   notifier_events: string;
@@ -212,6 +214,25 @@ export default function SettingsClient({ initial, baseUrl }: { initial: Settings
               <div>
                 <div className="text-sm font-semibold">Sandbox Mode (is_test)</div>
                 <p className="text-[11px] text-muted mt-0.5">Saat aktif, setiap order WR dikirim sebagai checkout dummy. Saldo Warung Rebahan ga kepotong, dan akun yang diterima adalah data dummy. <b>WAJIB matikan</b> sebelum jualan beneran.</p>
+              </div>
+            </label>
+          </div>
+
+          <div className="sm:col-span-2 rounded-btn border bg-surface-2 p-3">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input type="checkbox" className="accent-brand-from mt-0.5"
+                     checked={s.wr_auto_sync_enabled !== 'false'}
+                     onChange={(e) => setS((p) => ({ ...p, wr_auto_sync_enabled: e.target.checked ? 'true' : 'false' }))} />
+              <div className="flex-1">
+                <div className="text-sm font-semibold">Auto-Sync Background</div>
+                <p className="text-[11px] text-muted mt-0.5">Sync harga, stok, dan foto otomatis tiap interval di bawah ini. Ga perlu pencet tombol manual.</p>
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-xs text-muted">Interval:</span>
+                  <input type="number" min={1} className="input !py-1 !text-xs w-20"
+                         value={s.wr_auto_sync_interval_minutes}
+                         onChange={f('wr_auto_sync_interval_minutes')} />
+                  <span className="text-xs text-muted">menit (min. 1)</span>
+                </div>
               </div>
             </label>
           </div>

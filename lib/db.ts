@@ -129,6 +129,8 @@ function init(db: Database.Database) {
     wr_min_margin_rp: '1000',
     wr_round_to: '500',
     wr_test_mode: 'false',
+    wr_auto_sync_enabled: 'true',
+    wr_auto_sync_interval_minutes: '15',
     notifier_url: '',
     notifier_secret: '',
     notifier_events: 'order.created,order.paid,order.delivered,order.failed',
@@ -304,6 +306,13 @@ export function getDb(): Database.Database {
     db.pragma('foreign_keys = ON');
     init(db);
     global.__db = db;
+    try {
+      // Lazy import to avoid circular deps at module load
+      const { ensureWrScheduler } = require('./wrScheduler') as typeof import('./wrScheduler');
+      ensureWrScheduler();
+    } catch (e) {
+      console.warn('[wr] scheduler boot gagal:', (e as Error).message);
+    }
   }
   return global.__db;
 }

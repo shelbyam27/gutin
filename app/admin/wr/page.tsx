@@ -2,6 +2,7 @@ import AdminShell from '@/components/admin/AdminShell';
 import WrImporterClient from '@/components/admin/WrImporterClient';
 import { allSettings } from '@/lib/settings';
 import { getDb } from '@/lib/db';
+import { ensureWrScheduler, getSyncState } from '@/lib/wrScheduler';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,6 +43,13 @@ export default function AdminWrPage() {
     roundTo: Number(s.wr_round_to || '500') || 500,
   };
 
+  ensureWrScheduler();
+  const sync = {
+    enabled: s.wr_auto_sync_enabled !== 'false',
+    intervalMinutes: Math.max(1, Number(s.wr_auto_sync_interval_minutes || '15') || 15),
+    state: getSyncState(),
+  };
+
   return (
     <AdminShell>
       <div className="container-page py-8">
@@ -49,7 +57,7 @@ export default function AdminWrPage() {
           <h1 className="text-2xl font-bold">Import Produk dari Warung Rebahan</h1>
           <p className="text-sm text-muted">Pilih produk &amp; varian dari supplier, atur margin per varian, lalu impor langsung jadi katalog kamu.</p>
         </div>
-        <WrImporterClient configured={configured} imported={imported} defaults={defaults} />
+        <WrImporterClient configured={configured} imported={imported} defaults={defaults} sync={sync} />
       </div>
     </AdminShell>
   );

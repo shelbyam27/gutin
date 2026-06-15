@@ -43,14 +43,35 @@ type Mode = 'percent' | 'fixed';
 
 interface Defaults { mode: Mode; value: number; minMargin: number; roundTo: number; }
 
+interface SyncInfo {
+  enabled: boolean;
+  intervalMinutes: number;
+  state: {
+    lastRunAt: number;
+    intervalMs: number | null;
+    running: boolean;
+    lastResult: {
+      ranAt: string;
+      ok: boolean;
+      message?: string;
+      updated?: number;
+      stale?: number;
+      imagesUpdated?: number;
+      durationMs?: number;
+    } | null;
+  };
+}
+
 export default function WrImporterClient({
   configured,
   imported,
   defaults,
+  sync,
 }: {
   configured: boolean;
   imported: ImportedRow[];
   defaults: Defaults;
+  sync?: SyncInfo;
 }) {
   const router = useRouter();
   const [products, setProducts] = useState<RemoteProduct[]>([]);
@@ -128,10 +149,14 @@ export default function WrImporterClient({
   async function syncAll() {
     setBusy('sync'); setMsg(null);
     try {
-      const r = await fetch('/api/admin/wr/sync', { method: 'POST' });
+      const r = await fetch('/api/admin/wr/auto-sync', { method: 'POST' });
       const d = await r.json();
-      if (!r.ok) throw new Error(d?.error || 'Gagal');
-      setMsg({ kind: 'ok', text: `Sync selesai. ${d.updated} varian diperbarui, ${d.stale} varian hilang dinonaktifkan.` });
+      if (!r.ok || !d?.ok) throw new Error(d?.result?.message || d?.error || 'Gagal');
+      const x = d.result;
+      setMsg({
+        kind: 'ok',
+        text: `Sync selesai dalam ${Math.round((x?.durationMs ?? 0) / 100) / 10}s — ${x?.updated ?? 0} varian, ${x?.stale ?? 0} dinonaktifkan, ${x?.imagesUpdated ?? 0} foto.`,
+      });
       router.refresh();
     } catch (e) {
       setMsg({ kind: 'err', text: (e as Error).message });
@@ -193,10 +218,30 @@ export default function WrImporterClient({
               {busy === 'bulk' ? 'Refetch...' : 'Recover Order Rusak'}
             </button>
             <button onClick={syncAll} disabled={busy === 'sync' || imported.length === 0} className="btn btn-secondary !text-xs">
-              {busy === 'sync' ? 'Sync...' : 'Sync Harga & Stok dari WR'}
+              {busy === 'sync' ? 'Sync...' : 'Sync Sekarang'}
             </button>
           </div>
         </div>
+
+        {sync && (
+          <div className="mb-3 rounded-btn bg-surface-2 px-3 py-2 text-[11px] flex items-center gap-2 flex-wrap">
+            <span className={`inline-block w-2 h-2 rounded-full ${sync.enabled ? 'bg-success' : 'bg-muted'}`} />
+            {sync.enabled ? (
+              <>
+                Auto-sync aktif tiap <b>{sync.intervalMinutes} menit</b>.
+                {sync.state.lastResult ? (
+                  <> Terakhir: <span className="text-muted">{new Date(sync.state.lastResult.ranAt).toLocaleString('id-ID')}</span>{' '}
+                    {sync.state.lastResult.ok
+                      ? <span className="text-success">✓ {sync.state.lastResult.updated ?? 0} varian, {sync.state.lastResult.imagesUpdated ?? 0} foto</span>
+                      : <span className="text-danger">✗ {sync.state.lastResult.message}</span>}
+                  </>
+                ) : <span className="text-muted">belum pernah jalan</span>}
+              </>
+            ) : (
+              <>Auto-sync <b>nonaktif</b>. Aktifkan di <a href="/admin/settings" className="text-brand-from underline">Pengaturan</a>.</>
+            )}
+          </div>
+        )}
         {imported.length === 0 ? (
           <p className="text-sm text-muted">Belum ada varian yang diimpor.</p>
         ) : (

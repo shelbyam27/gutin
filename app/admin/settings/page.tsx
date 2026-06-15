@@ -11,6 +11,7 @@ const KEYS = [
   'wr_api_key', 'wr_base_url',
   'wr_default_margin_mode', 'wr_default_margin_value',
   'wr_min_margin_rp', 'wr_round_to', 'wr_test_mode',
+  'wr_auto_sync_enabled', 'wr_auto_sync_interval_minutes',
   'notifier_url', 'notifier_secret', 'notifier_events',
 ] as const;
 
@@ -26,6 +27,8 @@ export default function AdminSettingsPage() {
   if (!initial.wr_min_margin_rp) initial.wr_min_margin_rp = '1000';
   if (!initial.wr_round_to) initial.wr_round_to = '500';
   if (!initial.wr_test_mode) initial.wr_test_mode = 'false';
+  if (!initial.wr_auto_sync_enabled) initial.wr_auto_sync_enabled = 'true';
+  if (!initial.wr_auto_sync_interval_minutes) initial.wr_auto_sync_interval_minutes = '15';
   if (!initial.notifier_events) initial.notifier_events = 'order.created,order.paid,order.delivered,order.failed';
 
   return (
