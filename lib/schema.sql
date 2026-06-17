@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS products (
   source TEXT DEFAULT 'manual',
   wr_id TEXT,
   last_synced_at TEXT,
+  image_locked INTEGER DEFAULT 0,
   created_at TEXT DEFAULT (datetime('now'))
 );
 

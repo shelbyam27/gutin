@@ -108,9 +108,10 @@ export async function runWrSync(): Promise<SyncResult> {
       }
 
       const wrProductsLocal = db.prepare(
-        `SELECT id, wr_id, image FROM products WHERE source = 'wr' AND wr_id IS NOT NULL`,
-      ).all() as Array<{ id: number; wr_id: string; image: string | null }>;
+        `SELECT id, wr_id, image, image_locked FROM products WHERE source = 'wr' AND wr_id IS NOT NULL`,
+      ).all() as Array<{ id: number; wr_id: string; image: string | null; image_locked: number | null }>;
       for (const p of wrProductsLocal) {
+        if (p.image_locked) continue;
         const img = imageMap[p.wr_id];
         if (img && img !== p.image) {
           db.prepare(`UPDATE products SET image = ?, last_synced_at = ? WHERE id = ?`).run(img, now, p.id);

@@ -18,6 +18,9 @@ interface Product {
   brand_color: string | null;
   is_active: number;
   sort_order: number;
+  source?: string | null;
+  wr_id?: string | null;
+  image_locked?: number | null;
 }
 
 interface VariantRow {
@@ -62,13 +65,16 @@ function ProductForm({ product }: { product: Product }) {
   const [category, setCategory] = useState(product.category);
   const [color, setColor] = useState(product.brand_color || '#6366f1');
   const [image, setImage] = useState(product.image || '');
+  const [imageLocked, setImageLocked] = useState(!!product.image_locked);
   const [shortDesc, setShortDesc] = useState(product.short_desc || '');
   const [longDesc, setLongDesc] = useState(product.long_desc || '');
   const [active, setActive] = useState(!!product.is_active);
   const [sortOrder, setSortOrder] = useState(product.sort_order);
   const [saving, setSaving] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
   const router = useRouter();
+  const isWr = product.source === 'wr' && !!product.wr_id;
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -85,12 +91,35 @@ function ProductForm({ product }: { product: Product }) {
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d?.error || 'Gagal simpan');
-      setMsg({ kind: 'ok', text: 'Tersimpan.' });
+      setMsg({ kind: 'ok', text: 'Tersimpan. Logo terkunci dari overwrite auto-sync WR.' });
+      setImageLocked(true);
       router.refresh();
     } catch (e) {
       setMsg({ kind: 'err', text: (e as Error).message });
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function resetImageLock() {
+    if (!confirm('Reset logo ke versi resmi dari Warung Rebahan? Logo akan diambil ulang saat sync berikutnya.')) return;
+    setResetting(true); setMsg(null);
+    try {
+      const r = await fetch(`/api/admin/products/${product.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_locked: 0, image: '' }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d?.error || 'Gagal reset');
+      setImage('');
+      setImageLocked(false);
+      setMsg({ kind: 'ok', text: 'Lock dilepas. Sync WR berikutnya akan ambil logo resmi.' });
+      router.refresh();
+    } catch (e) {
+      setMsg({ kind: 'err', text: (e as Error).message });
+    } finally {
+      setResetting(false);
     }
   }
 
@@ -128,7 +157,48 @@ function ProductForm({ product }: { product: Product }) {
           </select>
         </div>
         <div><label className="label">Brand Color</label><input type="color" className="input !p-1 h-11" value={color} onChange={(e) => setColor(e.target.value)} /></div>
-        <div className="sm:col-span-2"><label className="label">URL Gambar</label><input className="input font-mono text-xs" placeholder="/brands/netflix.svg" value={image} onChange={(e) => setImage(e.target.value)} /></div>
+        <div className="sm:col-span-2">
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <label className="label !mb-0">URL Gambar</label>
+            {product.source === 'wr' && product.wr_id && (
+              product.image_locked ? (
+                <span className="badge badge-warning inline-flex items-center gap-1">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                  Logo manual (auto-sync diabaikan)
+                </span>
+              ) : (
+                <span className="text-[11px] text-muted">Mengikuti logo otomatis dari WR</span>
+              )
+            )}
+          </div>
+          <div className="flex gap-2">
+            <input
+              className="input font-mono text-xs flex-1"
+              placeholder="/brands/netflix.svg"
+              value={image}
+              onChange={(e) => setImage(e.target.value)}
+            />
+            {product.source === 'wr' && product.wr_id && product.image_locked ? (
+              <button
+                type="button"
+                onClick={resetImageLock}
+                disabled={resetting}
+                className="btn btn-ghost !py-2 !px-3 !text-xs whitespace-nowrap"
+                title="Hapus override logo manual; auto-sync akan tarik logo dari WR lagi"
+              >
+                {resetting ? '...' : 'Pakai Logo WR'}
+              </button>
+            ) : null}
+          </div>
+          {product.source === 'wr' && product.wr_id && (
+            <p className="text-[11px] text-muted mt-1.5">
+              Logo yang kamu simpan manual akan tetap dipertahankan walau auto-sync jalan. Klik <em>Pakai Logo WR</em> kalau mau kembali ke logo bawaan.
+            </p>
+          )}
+        </div>
         <div className="sm:col-span-2"><label className="label">Deskripsi Singkat</label><input className="input" value={shortDesc} onChange={(e) => setShortDesc(e.target.value)} /></div>
         <div className="sm:col-span-2"><label className="label">Deskripsi Panjang</label><textarea className="textarea" rows={5} value={longDesc} onChange={(e) => setLongDesc(e.target.value)} /></div>
         <div><label className="label">Urutan Tampil</label><input type="number" className="input" value={sortOrder} onChange={(e) => setSortOrder(Number(e.target.value))} /></div>

@@ -19,6 +19,7 @@ interface Product {
   source: string | null;
   wr_id: string | null;
   last_synced_at: string | null;
+  image_locked: number | null;
 }
 
 interface VariantRow {

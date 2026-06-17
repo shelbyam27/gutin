@@ -110,7 +110,9 @@ export async function POST(req: NextRequest) {
         createdProducts++;
       } else {
         productId = local.id;
-        if (remoteImage) {
+        const lockRow = db.prepare('SELECT image_locked FROM products WHERE id = ?').get(productId) as { image_locked: number } | undefined;
+        const locked = !!lockRow?.image_locked;
+        if (remoteImage && !locked) {
           db.prepare(
             `UPDATE products SET name = ?, category = ?, short_desc = ?, long_desc = ?, image = ?, last_synced_at = ?
              WHERE id = ?`,

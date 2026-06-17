@@ -80,6 +80,12 @@ function migrate(db: Database.Database) {
 
     db.exec('PRAGMA user_version = 2;');
   }
+
+  if (v < 3) {
+    const pCols = (db.prepare('PRAGMA table_info(products)').all() as Array<{ name: string }>).map((c) => c.name);
+    if (!pCols.includes('image_locked')) db.exec('ALTER TABLE products ADD COLUMN image_locked INTEGER DEFAULT 0');
+    db.exec('PRAGMA user_version = 3;');
+  }
 }
 
 function init(db: Database.Database) {

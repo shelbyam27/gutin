@@ -24,9 +24,19 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const fields = Object.entries(body.data).filter(([, v]) => v !== undefined);
   if (fields.length === 0) return NextResponse.json({ ok: true });
 
+  const db = getDb();
+
+  if (body.data.image !== undefined) {
+    const current = db.prepare('SELECT image FROM products WHERE id = ?').get(id) as { image: string | null } | undefined;
+    const incoming = body.data.image ?? '';
+    if ((current?.image || '') !== incoming) {
+      fields.push(['image_locked', 1] as [string, any]);
+    }
+  }
+
   const set = fields.map(([k]) => `${k} = ?`).join(', ');
   const values = fields.map(([, v]) => v as any);
-  getDb().prepare(`UPDATE products SET ${set} WHERE id = ?`).run(...values, id);
+  db.prepare(`UPDATE products SET ${set} WHERE id = ?`).run(...values, id);
   return NextResponse.json({ ok: true });
 }
 
