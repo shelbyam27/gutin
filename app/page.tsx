@@ -155,9 +155,9 @@ export default function HomePage() {
           </div>
 
           <h1 className="font-extrabold tracking-tight leading-[1.05] text-4xl sm:text-6xl">
-            Toko digital{" "}
+            Beli Apps Premium{" "}
             <span className="inline-block whitespace-nowrap">
-              yang <span className="highlight-yellow">simpel</span>
+              Tanpa <span className="highlight-yellow">Ribet</span>
             </span>
           </h1>
 
@@ -181,10 +181,7 @@ export default function HomePage() {
       <section className="container-page -mt-10 sm:-mt-12 relative z-20">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           {stats.map((s) => (
-            <div
-              key={s.l}
-              className="card-brutal px-4 py-5 text-center"
-            >
+            <div key={s.l} className="card-brutal px-4 py-5 text-center">
               <div className="font-extrabold text-base sm:text-lg leading-tight">
                 {s.v}
               </div>
@@ -265,9 +262,7 @@ export default function HomePage() {
             {
               t: "Proses Otomatis",
               d: "Akun langsung dikirim setelah pembayaran lunas.",
-              icon: (
-                <path d="M13 2L3 14h7v8l10-12h-7V2z" />
-              ),
+              icon: <path d="M13 2L3 14h7v8l10-12h-7V2z" />,
             },
             {
               t: "Garansi Aktif",
