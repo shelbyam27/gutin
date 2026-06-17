@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import ThemeToggle from '@/components/ThemeToggle';
 
 const ITEMS = [
   { href: '/admin', label: 'Dashboard', icon: 'home' },
@@ -67,7 +66,6 @@ export default function Sidebar({ brand, username }: { brand: string; username: 
             {username.charAt(0).toUpperCase()}
           </div>
           <div className="truncate">{username}</div>
-          <div className="ml-auto"><ThemeToggle /></div>
         </div>
         <button onClick={logout} className="btn btn-secondary w-full !text-xs">Logout</button>
       </div>

@@ -88,36 +88,31 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
         </nav>
 
         <div className="grid lg:grid-cols-[1fr_400px] gap-8">
-          <div>
-            <div className="card overflow-hidden">
-              <div
-                className="aspect-[16/9] flex items-center justify-center"
-                style={{
-                  background: `linear-gradient(135deg, ${p.brand_color || '#6366f1'}, #00000044)`,
-                }}
-              >
+          <div className="space-y-5">
+            <div className="card-brutal overflow-hidden">
+              <div className="aspect-[16/9] flex items-center justify-center bg-surface-2 border-b-2 border-ink">
                 {p.image ? (
                   <img src={p.image} alt={p.name} className="w-32 h-32 object-contain" />
                 ) : (
-                  <span className="text-white text-7xl font-extrabold">{p.name.charAt(0)}</span>
+                  <span className="text-7xl font-extrabold text-muted">{p.name.charAt(0)}</span>
                 )}
               </div>
               <div className="p-6">
-                <span className="badge badge-muted">{p.category}</span>
-                <h1 className="text-2xl sm:text-3xl font-bold mt-3">{p.name}</h1>
+                <span className="badge badge-muted uppercase tracking-wide">{p.category}</span>
+                <h1 className="text-2xl sm:text-3xl font-extrabold mt-3 tracking-tight">{p.name}</h1>
                 <p className="text-muted mt-2">{p.short_desc}</p>
               </div>
             </div>
 
-            <div className="card p-6 mt-5">
-              <h2 className="font-semibold mb-3">Deskripsi Produk</h2>
+            <div className="card-brutal p-6">
+              <h2 className="font-extrabold mb-3 text-lg">Deskripsi Produk</h2>
               <p className="text-sm leading-relaxed text-muted whitespace-pre-line">
                 {p.long_desc || p.short_desc || 'Tidak ada deskripsi.'}
               </p>
             </div>
 
-            <div className="card p-6 mt-5">
-              <h2 className="font-semibold mb-3">Penting Sebelum Order</h2>
+            <div className="card-brutal p-6">
+              <h2 className="font-extrabold mb-3 text-lg">Penting Sebelum Order</h2>
               <ul className="text-sm text-muted space-y-2 list-disc pl-5">
                 <li>Akun dikirim otomatis ke email & ditampilkan di halaman pesanan setelah pembayaran lunas.</li>
                 <li>Pastikan email yang kamu masukkan benar dan aktif.</li>
@@ -128,16 +123,16 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
           </div>
 
           <div>
-            <div className="lg:sticky lg:top-24">
+            <div className="lg:sticky lg:top-24 space-y-4">
               <PurchaseCard variants={variants} />
               {!variants.some((v) => v.stock > 0) && (
-                <div className="card p-4 mt-4 text-sm text-warning">
+                <div className="card-brutal p-4 text-sm text-warning font-semibold">
                   Stok kosong sementara. Cek lagi nanti atau hubungi admin.
                 </div>
               )}
-              <div className="text-center text-xs text-muted mt-4">
+              <div className="text-center text-xs text-muted">
                 Mulai dari{' '}
-                <span className="gradient-text font-bold">{formatIDR(minPrice)}</span>
+                <span className="text-brand font-extrabold">{formatIDR(minPrice)}</span>
               </div>
             </div>
           </div>

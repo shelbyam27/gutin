@@ -1,7 +1,6 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
-import { THEME_INIT_SCRIPT } from '@/lib/theme';
 import { getSetting } from '@/lib/settings';
 
 const jakarta = Plus_Jakarta_Sans({
@@ -40,10 +39,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id" className={jakarta.variable}>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-      </head>
       <body className="font-sans">{children}</body>
     </html>
   );
 }
+

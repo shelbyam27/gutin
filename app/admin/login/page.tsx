@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import LoginForm from '@/components/admin/LoginForm';
-import ThemeToggle from '@/components/ThemeToggle';
 import { readSession } from '@/lib/auth';
 import { getSetting } from '@/lib/settings';
 import type { Metadata } from 'next';
@@ -29,7 +28,6 @@ export default function AdminLogin() {
             </span>
             {brand}
           </Link>
-          <div className="ml-auto"><ThemeToggle /></div>
         </div>
       </header>
       <main className="flex-1 grid place-items-center px-4 py-12">

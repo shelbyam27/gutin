@@ -27,7 +27,9 @@ export default function PurchaseCard({ variants }: { variants: VariantPurchase[]
 
   const variant = variants.find((v) => v.id === selected) || variants[0];
   const hasDiscount = variant && variant.original_price > variant.price;
-  const pct = hasDiscount ? Math.round(((variant!.original_price - variant!.price) / variant!.original_price) * 100) : 0;
+  const pct = hasDiscount
+    ? Math.round(((variant!.original_price - variant!.price) / variant!.original_price) * 100)
+    : 0;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -49,11 +51,7 @@ export default function PurchaseCard({ variants }: { variants: VariantPurchase[]
       const res = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          variantId: variant.id,
-          email,
-          whatsapp,
-        }),
+        body: JSON.stringify({ variantId: variant.id, email, whatsapp }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'Gagal membuat pesanan.');
@@ -67,14 +65,14 @@ export default function PurchaseCard({ variants }: { variants: VariantPurchase[]
 
   if (!variants.length) {
     return (
-      <div className="card p-6 text-center text-muted">
+      <div className="card-brutal p-6 text-center text-muted">
         Belum ada varian aktif untuk produk ini.
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="card p-5 space-y-4">
+    <form onSubmit={handleSubmit} className="card-brutal p-5 space-y-4">
       <div>
         <div className="label">Pilih Paket</div>
         <div className="space-y-2">
@@ -85,30 +83,38 @@ export default function PurchaseCard({ variants }: { variants: VariantPurchase[]
             return (
               <label
                 key={v.id}
-                className={`flex items-start gap-3 p-3 rounded-btn border cursor-pointer transition relative ${
-                  active ? 'border-brand-from bg-surface-2' : 'hover:bg-surface-2'
-                } ${out ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`variant-option ${active ? 'variant-option-active' : ''} ${
+                  out ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
               >
                 <input
                   type="radio"
                   name="variant"
-                  className="mt-1 accent-brand-from"
+                  className="mt-1 accent-ink"
                   checked={active}
                   disabled={out}
                   onChange={() => setSelected(v.id)}
                 />
                 <div className="flex-1">
                   <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <div className="font-semibold flex items-center gap-1.5">
+                    <div className="font-bold flex items-center gap-1.5">
                       {v.name}
                       {v.badge && (
-                        <span className={`badge text-[10px] ${v.badge === 'Flash Sale' ? 'badge-danger' : 'badge-warning'}`}>{v.badge}</span>
+                        <span
+                          className={`badge text-[10px] ${
+                            v.badge === 'Flash Sale' ? 'badge-danger' : 'badge-warning'
+                          }`}
+                        >
+                          {v.badge}
+                        </span>
                       )}
                     </div>
                     <div className="text-right">
-                      <div className="font-bold">{formatIDR(v.price)}</div>
+                      <div className="font-extrabold text-brand">{formatIDR(v.price)}</div>
                       {variantDiscount && (
-                        <div className="text-[11px] text-muted line-through">{formatIDR(v.original_price)}</div>
+                        <div className="text-[11px] text-muted line-through">
+                          {formatIDR(v.original_price)}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -117,7 +123,7 @@ export default function PurchaseCard({ variants }: { variants: VariantPurchase[]
                     <span>·</span>
                     <span>
                       {out ? (
-                        <span className="text-danger">Stok habis</span>
+                        <span className="text-danger font-semibold">Stok habis</span>
                       ) : (
                         <>Stok {v.stock}</>
                       )}
@@ -125,7 +131,9 @@ export default function PurchaseCard({ variants }: { variants: VariantPurchase[]
                     {v.flash_slots_left != null && v.flash_slots_left <= 10 && (
                       <>
                         <span>·</span>
-                        <span className="text-danger font-semibold">Sisa {v.flash_slots_left} slot</span>
+                        <span className="text-danger font-semibold">
+                          Sisa {v.flash_slots_left} slot
+                        </span>
                       </>
                     )}
                   </div>
@@ -163,7 +171,7 @@ export default function PurchaseCard({ variants }: { variants: VariantPurchase[]
       </div>
 
       {error && (
-        <div className="text-sm text-danger bg-danger/10 border border-danger/30 rounded-btn px-3 py-2">
+        <div className="text-sm text-danger bg-danger/10 border-2 border-danger/40 rounded-btn px-3 py-2 font-semibold">
           {error}
         </div>
       )}
@@ -174,7 +182,11 @@ export default function PurchaseCard({ variants }: { variants: VariantPurchase[]
 
       {hasDiscount && (
         <div className="text-center text-xs text-muted -mt-2">
-          Hemat <span className="text-success font-semibold">{formatIDR(variant!.original_price - variant!.price)} ({pct}%)</span> dari harga normal
+          Hemat{' '}
+          <span className="text-success font-bold">
+            {formatIDR(variant!.original_price - variant!.price)} ({pct}%)
+          </span>{' '}
+          dari harga normal
         </div>
       )}
 
@@ -197,7 +209,8 @@ function FlashCountdown({ endsAt }: { endsAt: string }) {
   const s = Math.floor((remain % 60_000) / 1000);
   return (
     <div className="mt-2 text-[11px] text-danger font-semibold font-mono">
-      Berakhir dalam {String(h).padStart(2, '0')}:{String(m).padStart(2, '0')}:{String(s).padStart(2, '0')}
+      Berakhir dalam {String(h).padStart(2, '0')}:{String(m).padStart(2, '0')}:
+      {String(s).padStart(2, '0')}
     </div>
   );
 }
