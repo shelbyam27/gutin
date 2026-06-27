@@ -20,7 +20,7 @@ export async function GET(
   }
 
   const code = params.code;
-  if (!/^[A-Z0-9-]{8,40}$/.test(code)) {
+  if (!/^INV-\d{6}-[A-F0-9]{8,16}$/.test(code)) {
     return NextResponse.json({ error: 'Kode tidak valid.' }, { status: 400 });
   }
 

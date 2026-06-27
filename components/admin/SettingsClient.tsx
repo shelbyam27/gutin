@@ -35,6 +35,7 @@ export default function SettingsClient({ initial, baseUrl }: { initial: Settings
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
   const [pwd1, setPwd1] = useState(''); const [pwd2, setPwd2] = useState('');
+  const [pwdCurrent, setPwdCurrent] = useState('');
   const router = useRouter();
 
   function f<K extends keyof SettingsForm>(k: K) {
@@ -129,18 +130,21 @@ export default function SettingsClient({ initial, baseUrl }: { initial: Settings
   }
 
   async function changePassword() {
-    if (pwd1 !== pwd2) { setMsg({ kind: 'err', text: 'Password tidak sama.' }); return; }
-    if (pwd1.length < 8) { setMsg({ kind: 'err', text: 'Minimal 8 karakter.' }); return; }
+    if (!pwdCurrent) { setMsg({ kind: 'err', text: 'Isi password lama.' }); return; }
+    if (pwd1 !== pwd2) { setMsg({ kind: 'err', text: 'Password baru tidak sama.' }); return; }
+    if (pwd1.length < 12) { setMsg({ kind: 'err', text: 'Password baru minimal 12 karakter.' }); return; }
+    if (pwd1 === pwdCurrent) { setMsg({ kind: 'err', text: 'Password baru harus berbeda dari yang lama.' }); return; }
     setBusy('pwd');
     try {
       const r = await fetch('/api/admin/change-password', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: pwd1 }),
+        body: JSON.stringify({ current_password: pwdCurrent, password: pwd1 }),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d?.error || 'Gagal');
-      setMsg({ kind: 'ok', text: 'Password diperbarui.' });
-      setPwd1(''); setPwd2('');
+      setMsg({ kind: 'ok', text: 'Password diperbarui. Kamu akan logout, login lagi dengan password baru.' });
+      setPwd1(''); setPwd2(''); setPwdCurrent('');
+      setTimeout(() => router.push('/admin/login'), 1500);
     } catch (e) {
       setMsg({ kind: 'err', text: (e as Error).message });
     } finally { setBusy(null); }
@@ -302,10 +306,11 @@ export default function SettingsClient({ initial, baseUrl }: { initial: Settings
 
       <Section title="Akun Admin">
         <div className="grid sm:grid-cols-2 gap-4">
-          <div><label className="label">Password Baru</label><input type="password" className="input" value={pwd1} onChange={(e) => setPwd1(e.target.value)} /></div>
-          <div><label className="label">Konfirmasi</label><input type="password" className="input" value={pwd2} onChange={(e) => setPwd2(e.target.value)} /></div>
+          <div className="sm:col-span-2"><label className="label">Password Saat Ini</label><input type="password" autoComplete="current-password" className="input" value={pwdCurrent} onChange={(e) => setPwdCurrent(e.target.value)} /></div>
+          <div><label className="label">Password Baru (min 12 karakter)</label><input type="password" autoComplete="new-password" className="input" value={pwd1} onChange={(e) => setPwd1(e.target.value)} /></div>
+          <div><label className="label">Konfirmasi</label><input type="password" autoComplete="new-password" className="input" value={pwd2} onChange={(e) => setPwd2(e.target.value)} /></div>
         </div>
-        <button type="button" onClick={changePassword} disabled={busy === 'pwd' || !pwd1 || !pwd2} className="btn btn-secondary mt-3">
+        <button type="button" onClick={changePassword} disabled={busy === 'pwd' || !pwdCurrent || !pwd1 || !pwd2} className="btn btn-secondary mt-3">
           {busy === 'pwd' ? '...' : 'Ubah Password'}
         </button>
       </Section>

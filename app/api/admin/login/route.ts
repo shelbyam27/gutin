@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { verifyAdminLogin, createSessionCookie, setSessionCookie } from '@/lib/auth';
-import { rateLogin, clearLoginBucket } from '@/lib/ratelimit';
+import { rateLogin, clearLoginBucket, rateLoginUsername, clearLoginUsernameBucket } from '@/lib/ratelimit';
 import { checkSameOrigin, getIp } from '@/lib/security';
 import { logAudit } from '@/lib/db';
 
@@ -35,9 +35,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Input tidak valid.' }, { status: 400 });
   }
 
+  // Second layer: rate-limit per-username supaya brute force satu akun tetap di-cap
+  // walau attacker bisa rotate IP/spoof XFF dari berbagai source.
+  const userLimit = rateLoginUsername(parsed.data.username);
+  if (!userLimit.ok) {
+    return NextResponse.json(
+      { error: userLimit.message || 'Akun di-throttle.' },
+      { status: 429, headers: { 'Retry-After': String(userLimit.retryAfter) } },
+    );
+  }
+
   await new Promise((r) => setTimeout(r, 250 + Math.random() * 250));
 
-  const ok = verifyAdminLogin(parsed.data.username, parsed.data.password);
+  const ok = await verifyAdminLogin(parsed.data.username, parsed.data.password);
   if (!ok) {
     logAudit(null, 'login_failed', `username=${parsed.data.username.slice(0, 32)}`, ip);
     return NextResponse.json(
@@ -47,6 +57,7 @@ export async function POST(req: NextRequest) {
   }
 
   clearLoginBucket(ip);
+  clearLoginUsernameBucket(parsed.data.username);
   const cookie = createSessionCookie(ok.id, ok.username, ok.password_changed_at);
   setSessionCookie(cookie);
   logAudit(ok.id, 'login_success', `username=${ok.username}`, ip);

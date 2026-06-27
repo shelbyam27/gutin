@@ -1,4 +1,5 @@
 import { getSetting } from './settings';
+import { assertSafeOutboundUrl } from './ssrf';
 
 export interface WrVariant {
   id: string;
@@ -56,6 +57,7 @@ function creds(): { apiKey: string; baseUrl: string } {
   if (!apiKey) {
     throw new Error('Warung Rebahan belum dikonfigurasi. Isi API Key di Admin → Pengaturan.');
   }
+  assertSafeOutboundUrl(baseUrl, 'wr_base_url');
   return { apiKey, baseUrl };
 }
 
@@ -118,6 +120,11 @@ export async function wrFindTransaction(orderId: string): Promise<WrTransaction 
 export async function wrScrapeImages(): Promise<Record<string, string>> {
   const baseUrl = (getSetting('wr_base_url').trim() || 'https://warungrebahan.com/api/v1').replace(/\/$/, '');
   const origin = baseUrl.replace(/\/api\/v\d+$/, '');
+  try {
+    assertSafeOutboundUrl(origin, 'wr_base_url');
+  } catch {
+    return {};
+  }
   try {
     const res = await fetch(`${origin}/products`, {
       headers: { 'User-Agent': 'Mozilla/5.0 GutInc/1.0' },

@@ -97,25 +97,38 @@ export function clearSessionCookie() {
   cookies().delete(COOKIE_NAME);
 }
 
-export function verifyAdminLogin(
+export async function verifyAdminLogin(
   username: string,
   password: string,
-): { id: number; username: string; password_changed_at: string | null } | null {
+): Promise<{ id: number; username: string; password_changed_at: string | null } | null> {
   const row = getDb()
     .prepare('SELECT id, username, password_hash, password_changed_at FROM admins WHERE username = ?')
     .get(username) as
     | { id: number; username: string; password_hash: string; password_changed_at: string | null }
     | undefined;
   if (!row) {
-    bcrypt.compareSync(password, '$2a$12$abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcd');
+    // Dummy compare untuk anti-timing attack.
+    await bcrypt.compare(password, '$2a$12$abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcd');
     return null;
   }
-  if (!bcrypt.compareSync(password, row.password_hash)) return null;
+  const ok = await bcrypt.compare(password, row.password_hash);
+  if (!ok) return null;
   return { id: row.id, username: row.username, password_changed_at: row.password_changed_at };
 }
 
-export function changeAdminPassword(adminId: number, newPassword: string) {
-  const hash = bcrypt.hashSync(newPassword, 12);
+export async function verifyAdminPassword(adminId: number, password: string): Promise<boolean> {
+  const row = getDb()
+    .prepare('SELECT password_hash FROM admins WHERE id = ?')
+    .get(adminId) as { password_hash: string } | undefined;
+  if (!row) {
+    await bcrypt.compare(password, '$2a$12$abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcd');
+    return false;
+  }
+  return bcrypt.compare(password, row.password_hash);
+}
+
+export async function changeAdminPassword(adminId: number, newPassword: string) {
+  const hash = await bcrypt.hash(newPassword, 12);
   getDb()
     .prepare("UPDATE admins SET password_hash = ?, password_changed_at = datetime('now') WHERE id = ?")
     .run(hash, adminId);

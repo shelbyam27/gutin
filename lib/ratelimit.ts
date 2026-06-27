@@ -52,6 +52,34 @@ export function clearLoginBucket(ip: string) {
   buckets.delete(`login:${ip}`);
 }
 
+const USERNAME_WINDOW_MS = 15 * 60 * 1000;
+const USERNAME_LOCK_MS = 30 * 60 * 1000;
+const USERNAME_MAX = 10;
+
+export function rateLoginUsername(username: string): RateResult {
+  const now = Date.now();
+  cleanup(now);
+  const key = `user:${username.toLowerCase().slice(0, 64)}`;
+  const b = buckets.get(key);
+  if (b?.lockUntil && b.lockUntil > now) {
+    return { ok: false, retryAfter: Math.ceil((b.lockUntil - now) / 1000), message: 'Akun di-throttle. Coba lagi nanti.' };
+  }
+  if (!b || b.resetAt < now) {
+    buckets.set(key, { count: 1, resetAt: now + USERNAME_WINDOW_MS });
+    return { ok: true, retryAfter: 0 };
+  }
+  b.count++;
+  if (b.count > USERNAME_MAX) {
+    b.lockUntil = now + USERNAME_LOCK_MS;
+    return { ok: false, retryAfter: Math.ceil(USERNAME_LOCK_MS / 1000), message: 'Akun di-throttle karena terlalu banyak percobaan login.' };
+  }
+  return { ok: true, retryAfter: 0 };
+}
+
+export function clearLoginUsernameBucket(username: string) {
+  buckets.delete(`user:${username.toLowerCase().slice(0, 64)}`);
+}
+
 export function rateOrder(ip: string): RateResult {
   const now = Date.now();
   const key = `order:${ip}`;

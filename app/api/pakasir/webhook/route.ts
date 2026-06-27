@@ -22,21 +22,25 @@ export async function POST(req: NextRequest) {
   }
 
   const secretConfigured = getSetting('pakasir_webhook_secret').trim();
-  if (secretConfigured) {
-    const url = new URL(req.url);
-    const tokenInUrl = url.searchParams.get('secret') || '';
-    const tokenInHeader = req.headers.get('x-webhook-secret') || '';
-    const provided = tokenInHeader || tokenInUrl;
-    if (!provided || !timingEqual(provided, secretConfigured)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+  if (!secretConfigured) {
+    // Tolak total kalau webhook secret belum diset.
+    // Lebih aman silently 403 daripada accept tanpa verifikasi.
+    console.warn('[pakasir webhook] secret belum dikonfigurasi, semua request webhook ditolak.');
+    return NextResponse.json({ error: 'Webhook not configured' }, { status: 503 });
+  }
+  const url = new URL(req.url);
+  const tokenInUrl = url.searchParams.get('secret') || '';
+  const tokenInHeader = req.headers.get('x-webhook-secret') || '';
+  const provided = tokenInHeader || tokenInUrl;
+  if (!provided || !timingEqual(provided, secretConfigured)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   const orderId = String(body?.order_id || '').trim();
   const amount = Number(body?.amount || 0);
   const project = String(body?.project || '').trim();
   const status = String(body?.status || '').trim();
-  if (!orderId || !amount || !/^[A-Z0-9-]{8,40}$/.test(orderId)) {
+  if (!orderId || !amount || !/^INV-\d{6}-[A-F0-9]{8,16}$/.test(orderId)) {
     return NextResponse.json({ error: 'Payload tidak valid' }, { status: 400 });
   }
 

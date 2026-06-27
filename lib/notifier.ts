@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { getSetting } from './settings';
 import { formatIDR } from './format';
+import { isSafeOutboundUrl } from './ssrf';
 
 export type NotifyEvent = 'order.created' | 'order.paid' | 'order.delivered' | 'order.failed';
 
@@ -142,6 +143,10 @@ function enabledEvents(): Set<NotifyEvent> {
 export function notifyOrder(payload: NotifyPayload): void {
   const url = getSetting('notifier_url').trim();
   if (!url) return;
+  if (!isSafeOutboundUrl(url)) {
+    console.warn('[notifier] notifier_url menuju host internal/loopback, ditolak:', url);
+    return;
+  }
   const events = enabledEvents();
   if (!events.has(payload.event)) return;
   void send(url, payload);
